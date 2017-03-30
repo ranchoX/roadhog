@@ -8,6 +8,20 @@ import getEntry from '../utils/getEntry';
 import getTheme from '../utils/getTheme';
 import getCSSLoaders from '../utils/getCSSLoaders';
 import normalizeDefine from '../utils/normalizeDefine';
+import addExtraBabelIncludes from '../utils/addExtraBabelIncludes';
+
+const baseSvgLoader = {
+  test: /\.svg$/,
+  loader: 'file',
+  query: {
+    name: 'static/[name].[hash:8].[ext]',
+  },
+};
+
+const spriteSvgLoader = {
+  test: /\.(svg)$/i,
+  loader: 'svg-sprite',
+};
 
 export default function (args, appBuild, config, paths) {
   const { debug, analyze } = args;
@@ -17,13 +31,14 @@ export default function (args, appBuild, config, paths) {
   const cssLoaders = getCSSLoaders(config);
   const theme = JSON.stringify(getTheme(process.cwd(), config));
 
-  return {
+  const finalWebpackConfig = {
     bail: true,
-    entry: getEntry(config, paths.appDirectory),
+    entry: getEntry(config, paths.appDirectory, /* isBuild */true),
     output: {
       path: appBuild,
       filename: '[name].js',
       publicPath,
+      chunkFilename: '[id].async.js',
     },
     resolve: {
       extensions: [
@@ -101,13 +116,6 @@ export default function (args, appBuild, config, paths) {
           loader: 'json',
         },
         {
-          test: /\.svg$/,
-          loader: 'file',
-          query: {
-            name: 'static/[name].[hash:8].[ext]',
-          },
-        },
-        {
           test: /\.tsx?$/,
           include: paths.appSrc,
           loader: 'babel!awesome-typescript',
@@ -173,7 +181,7 @@ export default function (args, appBuild, config, paths) {
           new CopyWebpackPlugin([
             {
               from: paths.appPublic,
-              to: paths.appBuild,
+              to: appBuild,
             },
           ]),
       )
@@ -192,4 +200,17 @@ export default function (args, appBuild, config, paths) {
       tls: 'empty',
     },
   };
+
+  if (config.svgSpriteLoaderDirs) {
+    baseSvgLoader.exclude = config.svgSpriteLoaderDirs;
+    spriteSvgLoader.include = config.svgSpriteLoaderDirs;
+    finalWebpackConfig.module.loaders = finalWebpackConfig.module.loaders.concat([
+      baseSvgLoader,
+      spriteSvgLoader,
+    ]);
+  } else {
+    finalWebpackConfig.module.loaders.push(baseSvgLoader);
+  }
+
+  return addExtraBabelIncludes(finalWebpackConfig, paths, config.extraBabelIncludes);
 }

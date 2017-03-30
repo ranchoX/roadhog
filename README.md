@@ -108,6 +108,13 @@ export default {
 
   // 支持自定义函数，API 参考 express@4
   'POST /api/users/create': (req, res) => { res.end('OK'); },
+
+  // Forward 到另一个服务器
+  'GET /assets/*': 'https://assets.online/',
+
+  // Forward 到另一个服务器，并指定子路径
+  // 请求 /someDir/0.0.50/index.css 会被代理到 https://g.alicdn.com/tb-page/taobao-home, 实际返回 https://g.alicdn.com/tb-page/taobao-home/0.0.50/index.css
+  'GET /someDir/(.*)': 'https://g.alicdn.com/tb-page/taobao-home',
 };
 ```
 
@@ -296,6 +303,29 @@ extraPostCSSPlugins: [
 
 这里有 [如何配置 antd theme 的例子](https://github.com/dvajs/dva-example-user-dashboard/commit/d6da33b3a6e18eb7f003752a4b00b5a660747c31) 。
 
+### svgSpriteLoaderDirs
+
+配置一个路径数组, 该路径下的 svg 文件会全部交给 [svg-sprite-loader](https://github.com/kisenka/svg-sprite-loader) 处理
+
+比如，使用 antd-mobile 的 [自定义 svg icon](https://mobile.ant.design/components/icon) 功能的用户，可以在 `.roadhogrc.js` 文件中做如下配置
+
+```js
+// npm i antd-mobile -S
+const path = require('path');
+const svgSpriteDirs = [
+  require.resolve('antd-mobile').replace(/warn\.js$/, ''), // antd-mobile 内置svg
+  path.resolve(__dirname, 'src/my-project-svg-foler'),  // 业务代码本地私有 svg 存放目录
+];
+
+export default {
+  // ...
+  svgSpriteLoaderDirs: svgSpriteDirs,
+  //...
+}
+
+```
+
+
 ## 环境变量
 
 可环境变量临时配置一些参数，包括：
@@ -303,6 +333,7 @@ extraPostCSSPlugins: [
 * `PORT`, 端口号，默认 8000
 * `HOST`, 默认 localhost
 * `HTTPS`，是否开启 https，默认关闭
+* `BROWSER`，设为 none 时不自动打开浏览器
 
 比如，使用 3000 端口开启服务器可以这样：
 
@@ -323,7 +354,6 @@ $ roadhog server -h
 Usage: roadhog server [options]
 
 Options:
-  --open  Open url in browser after started            [boolean] [default: true]
   -h      Show help                                                    [boolean]
 ```
 
@@ -383,7 +413,11 @@ SyntaxError: Unexpected token (15:23)
 ### Windows/Ubuntu 下每次启动后打开新 Tab 比较烦
 
 ```bash
-$ roadhog server --no-open
+# Ubuntu
+$ BROWSER=none roadhog server
+
+# Windows
+$ set BROWSER=none&&roadhog server
 ```
 
 ## LICENSE
